@@ -35,3 +35,35 @@ it("Should create a default fetcher", async () => {
       hello: "world",
    });
 });
+
+it("Should create a default fetcher", async () => {
+   const { router, handler } = scope({
+      foo(ctx: Interaction, id = 54) {
+         console.log("handling foo", id);
+      },
+      bar: {
+         // ts-expect-error if you forget to accept context as first param
+         foo(ctx: Interaction, user: { id: number }, bar = false) {
+            console.log("handling bar", user.id);
+         },
+      },
+   });
+   const buttonId = router.foo(54);
+
+   await handler("E" + buttonId).catch(allowError.routeNotFound);
+
+   await expect(() =>
+      handler(buttonId + "E")
+         .catch(allowError.routeNotFound)
+         .catch((e) => Promise.reject(e)),
+   ).rejects.toThrow();
+
+   await handler(buttonId);
+
+   // await handler(buttonId + "E", { customId: buttonId }).catch(ignore.routeNotFound);
+   // await handler(buttonId + "E", { customId: buttonId });
+
+   expect({ hello: "world" }).toEqual({
+      hello: "world",
+   });
+});

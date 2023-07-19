@@ -110,11 +110,12 @@ export function flare<CTX extends {}>() {
    };
 }
 
+type Handler<CTX> = CTX extends void ? (id: string) => ReturnType<typeof execute> : (id: string, ctx: CTX) => ReturnType<typeof execute>;
 type LockFn<CTX> = CTX extends void ? (...args: any[]) => boolean : (ctx: CTX, ...args: any[]) => boolean;
 type BaseFlareLock<CTX = any> = {
    _internal: { endpoints: Record<string, any>; ctx: CTX; lockFn?: LockFn<CTX> };
    router: Record<string, any>;
-   handler: (id: string, ...ctx: any) => Promise<any>;
+   handler: Handler<CTX>;
 };
 export function scope<T extends Router<CTX, T>, CTX = void, F extends LockFn<CTX> | undefined = undefined>(endpoints: T, lockFn?: F) {
    const methods: Methods = new Map();
@@ -122,7 +123,7 @@ export function scope<T extends Router<CTX, T>, CTX = void, F extends LockFn<CTX
    return {
       _internal: { endpoints, ctx: {} as CTX, lockFn },
       router,
-      handler: (id: string, ...ctx: CTX extends void ? [] : [CTX]) => execute(id, methods, ctx),
+      handler: ((id: string, ctx?: CTX) => execute(id, methods, ctx)) as Handler<CTX>,
    } satisfies BaseFlareLock;
 }
 
@@ -135,7 +136,7 @@ async function execute(id: string, methods: Methods, ctx: any) {
    // Unlock
    for (const [route, lock] of method.locks) {
       try {
-         if (!(await lock(...ctx))) throw "denied";
+         if (!(await lock(ctx))) throw "denied";
       } catch (e) {
          throw new FailedUnlockScopeError({ route, method, id, error: e });
       }
@@ -143,13 +144,13 @@ async function execute(id: string, methods: Methods, ctx: any) {
    // Execute
    // * Can't count params as verification because of default / optional params— or can we?
    // there can be less decoded args than params, but not more
-   if (!data) return await method.call(...ctx);
+   if (!data) return await method.call(ctx);
    try {
       const decoded = decode(data);
       if (!decoded) throw new InvalidPayloadScopeError({ id, method, data, msg: decoded });
       if (Array.isArray(decoded) && decoded.length > method.call.length)
          throw new InvalidPayloadScopeError({ id, method, data, msg: "too many args" });
-      return await method.call(...ctx, ...decoded);
+      return await method.call(ctx, ...decoded);
    } catch (e) {
       throw new InvalidPayloadScopeError({ id, method, data, msg: e });
    }
