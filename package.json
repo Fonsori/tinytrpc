@@ -4,7 +4,7 @@
    "main": "dist/index.js",
    "module": "dist/index.mjs",
    "types": "dist/index.d.ts",
-   "description": "Handle discord interactions like js callbacks",
+   "description": "Typesafe discord interactions",
    "scripts": {
       "dev": "vitest",
       "test": "vitest run",
