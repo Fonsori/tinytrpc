@@ -194,8 +194,7 @@ export class InvalidPayloadScopeError extends ScopeError {
 }
 
 const silence = (condition: (e: ScopeError) => boolean) => (e: Error) => {
-   if (e instanceof ScopeError) return;
-   if (condition(e)) return;
+   if (e instanceof ScopeError && condition(e)) return;
    throw e;
 };
 export const allowError = {
