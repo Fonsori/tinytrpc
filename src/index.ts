@@ -1,2 +1,1 @@
-import { scope, flare } from "./scope";
-export { scope, flare };
+export { scope, flare, allowError, FailedUnlockScopeError, InvalidPayloadScopeError, RouteNotFoundScopeError } from "./scope";

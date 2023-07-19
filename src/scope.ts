@@ -131,21 +131,28 @@ type Methods = Map<string, { call: AnyFn; locks: Map<string, AnyFn>; route: stri
 async function execute(id: string, methods: Methods, ctx: any) {
    const [path, data] = splitAt(id, idLength);
    const method = methods.get(path);
-   if (!method) throw `Route ${path} not found ${mass({ id })}`;
+   if (!method) throw new RouteNotFoundScopeError({ id, path });
    // Unlock
    for (const [route, lock] of method.locks) {
       try {
          if (!(await lock(...ctx))) throw "denied";
       } catch (e) {
-         throw `Failed unlock ${route} > ${method.route.slice(route.length)}: ${e} \n${mass({ id })}`;
+         throw new FailedUnlockScopeError({ route, method, id, error: e });
       }
    }
    // Execute
-   // * Can't count params as verification because of default / optional params
+   // * Can't count params as verification because of default / optional params— or can we?
+   // there can be less decoded args than params, but not more
    if (!data) return await method.call(...ctx);
-   const decoded = decode(data);
-   if (!decoded) throw `Invalid payload ${mass({ id, route: method.route, data, decoded })}`;
-   return await method.call(...ctx, ...decoded);
+   try {
+      const decoded = decode(data);
+      if (!decoded) throw new InvalidPayloadScopeError({ id, method, data, msg: decoded });
+      if (Array.isArray(decoded) && decoded.length > method.call.length)
+         throw new InvalidPayloadScopeError({ id, method, data, msg: "too many args" });
+      return await method.call(...ctx, ...decoded);
+   } catch (e) {
+      throw new InvalidPayloadScopeError({ id, method, data, msg: e });
+   }
 }
 const mass = (o: { id: string; route?: string; data?: string; decoded?: any }) => {
    let msg = `for id ${o.id}`;
@@ -153,4 +160,46 @@ const mass = (o: { id: string; route?: string; data?: string; decoded?: any }) =
    if (o.data) msg += `: ${o.data}`;
    if (o.decoded) msg += ` -> ${o.decoded}`;
    return msg;
+};
+
+// Error supression
+class ScopeError extends Error {
+   constructor(message: string) {
+      super(message);
+      this.name = "ScopeError";
+   }
+}
+export class RouteNotFoundScopeError extends ScopeError {
+   constructor(o: { id: string; path: string }) {
+      const message = `Route ${o.path} not found ${mass({ id: o.id })}`;
+      super(message);
+      this.name = "RouteNotFound";
+   }
+}
+export class FailedUnlockScopeError extends ScopeError {
+   constructor(o: { error: any; id: string; route: string; method: { route: string } }) {
+      const message = `Failed unlock ${o.route} > ${o.method.route.slice(o.route.length)}: ${o.error} \n${mass({
+         id: o.id,
+      })}`;
+      super(message);
+      this.name = "RouteNotFound";
+   }
+}
+export class InvalidPayloadScopeError extends ScopeError {
+   constructor(o: { id: string; method: { route: string }; msg: any; data: string }) {
+      const message = `Invalid payload ${mass({ id: o.id, route: o.method.route, data: o.data, decoded: o.msg })}`;
+      super(message);
+      this.name = "InvalidPayload";
+   }
+}
+
+const silence = (condition: (e: ScopeError) => boolean) => (e: Error) => {
+   if (e instanceof ScopeError) return;
+   if (condition(e)) return;
+   throw e;
+};
+export const allowError = {
+   routeNotFound: silence((e) => e instanceof RouteNotFoundScopeError),
+   failedUnlock: silence((e) => e instanceof FailedUnlockScopeError),
+   invalidPayload: silence((e) => e instanceof InvalidPayloadScopeError),
 };
