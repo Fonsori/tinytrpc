@@ -1,8 +1,5 @@
-import { afterAll, afterEach, beforeAll, expect, it } from "vitest";
+import { expect, it } from "vitest";
 import { allowError, flare, scope } from "./index";
-import { InvalidPayloadScopeError } from "../dist";
-import { AnySelectMenuInteraction } from "discord.js";
-// import type {Interaction} from "discordjs";
 type Interaction = { customId: string };
 
 export const parseIds = (customId: string | undefined) => (customId?.split("-").map((i) => i || undefined) as (string | undefined)[]) ?? [];
@@ -85,8 +82,8 @@ it("Should create a default fetcher", async () => {
    });
 });
 
-type Context = AnySelectMenuInteraction<"cached" | "raw">;
-// type Context = string;
+// type Context = AnySelectMenuInteraction<"cached" | "raw">;
+type Context = { customId: string; pear: boolean };
 // type Context = "cached" | "raw";
 
 it("Should create a default fetcher", async () => {

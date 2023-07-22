@@ -1,6 +1,6 @@
+import LZ from "lz-string";
 import { FailedUnlockScopeError, InvalidPayloadScopeError, RouteNotFoundScopeError } from "./errors.js";
 import { cyrb53 } from "./hash.js";
-import LZ from "lz-string";
 
 // Logic
 const idLength = 10;
@@ -111,7 +111,8 @@ export function flare<CTX extends {}>() {
    };
 }
 
-type Handler<CTX> = (id: string, ctx: CTX) => ReturnType<typeof execute>; // TODO: fix this
+type ExecuteReturn = ReturnType<typeof execute>;
+type Handler<CTX> = ((id: string) => ExecuteReturn) | ((id: string, ctx: CTX) => ExecuteReturn);
 type LockFn<CTX> = CTX extends void ? (...args: any[]) => boolean : (ctx: CTX, ...args: any[]) => boolean;
 type BaseFlareLock<CTX = any> = {
    _internal: { endpoints: Record<string, any>; ctx: CTX; lockFn?: LockFn<CTX> };
