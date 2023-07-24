@@ -172,6 +172,6 @@ async function execute(id: string, methods: Methods, ctx: any = VoidSymbol) {
       throw new InvalidPayloadScopeError({ id, method, data, msg: `too few args: decoded ${decoded.length} expected ${methodLength}` });
 
    // Execute
-   if (hasCtx) return await method.call(ctx, ...decoded);
-   return await method.call(...decoded);
+   const result = await (hasCtx ? method.call(ctx, ...decoded) : method.call(...decoded));
+   return { result };
 }
