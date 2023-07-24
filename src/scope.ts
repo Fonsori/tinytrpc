@@ -14,7 +14,8 @@ function encode<T>(obj: T) {
    if (enc.length > 100) throw new Error(`compressed data too long: ${enc.length} < ${stringified}`);
    return enc;
 }
-function decode(data: string) {
+function decode(data: string): any[] {
+   if (!data) return [];
    try {
       const parsed = JSON.parse(data);
       return parsed;
@@ -133,10 +134,13 @@ export function scope<T extends Router<CTX, T>, CTX = void, F extends LockFn<CTX
 
 // Execute the method, no type checking here needed
 type Methods = Map<string, { call: AnyFn; locks: Map<string, AnyFn>; route: string }>;
-async function execute(id: string, methods: Methods, ctx: any) {
+const VoidSymbol = {}; // literally impossible to match this as ctx... unless undefined, but still works then
+async function execute(id: string, methods: Methods, ctx: any = VoidSymbol) {
    const [path, data] = splitAt(id, idLength);
    const method = methods.get(path);
    if (!method) throw new RouteNotFoundScopeError({ id, path });
+   const hasCtx = ctx !== VoidSymbol;
+
    // Unlock
    for (const [route, lock] of method.locks) {
       try {
@@ -145,18 +149,29 @@ async function execute(id: string, methods: Methods, ctx: any) {
          throw new FailedUnlockScopeError({ route, method, id, error: e });
       }
    }
-   // Execute
-   // * Can't count params as verification because of default / optional params— or can we?
-   // there can be less decoded args than params, but not more
-   // apparently default params don't count for function length
-   // if (Array.isArray(decoded) && decoded.length > method.call.length)
-   //    throw new InvalidPayloadScopeError({ id, method, data, msg: "too many args" });
-   if (!data) return await method.call(ctx);
+
+   // Decode
+   let decoded;
    try {
-      const decoded = decode(data);
-      if (!decoded) throw new InvalidPayloadScopeError({ id, method, data, msg: decoded });
-      return await method.call(ctx, ...decoded);
+      decoded = decode(data);
    } catch (e) {
       throw new InvalidPayloadScopeError({ id, method, data, msg: e });
    }
+
+   // Validate decoded payload
+   // nullish check works because supposed to be arg ARRAY
+   if (!decoded) throw new InvalidPayloadScopeError({ id, method, data, msg: decoded });
+   if (!Array.isArray(decoded)) throw new InvalidPayloadScopeError({ id, method, data, msg: `decoded payload is not an array` });
+
+   // * Can't count params as verification because of default / optional params— or can we?
+   // WRONG there can be less decoded args than params, but not more...
+   // apparently default params don't count for function length
+   // So we check for too FEW args, since yeah...
+   const methodLength = method.call.length - (hasCtx ? 1 : 0);
+   if (decoded.length < methodLength)
+      throw new InvalidPayloadScopeError({ id, method, data, msg: `too few args: decoded ${decoded.length} expected ${methodLength}` });
+
+   // Execute
+   if (hasCtx) return await method.call(ctx, ...decoded);
+   return await method.call(...decoded);
 }

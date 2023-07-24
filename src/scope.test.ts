@@ -9,6 +9,12 @@ it("Should create a default fetcher", async () => {
       foo(ctx: Interaction, id = 54) {
          console.log("handling foo", id);
       },
+      hey() {
+         console.log("mu ha ha");
+      },
+      may(ctx: Interaction, e: undefined) {
+         console.log("may", e);
+      },
       bar: {
          // ts-expect-error if you forget to accept context as first param
          foo(ctx: Interaction, user: { id: number }, bar = false) {
@@ -16,9 +22,25 @@ it("Should create a default fetcher", async () => {
          },
       },
    });
-   const buttonId = router.foo(54);
-
+   const buttonId = router.foo(243129);
+   await handler(buttonId, { customId: buttonId });
+   await handler(buttonId, { customId: buttonId });
    await handler("E" + buttonId, { customId: buttonId }).catch(allowError.routeNotFound);
+   const buttonId2 = router.foo();
+   await handler(buttonId2, { customId: buttonId });
+
+   const anotherId = router.hey();
+   await handler(anotherId, { customId: buttonId });
+
+   const moreId = router.may(undefined);
+   await handler(moreId, { customId: buttonId });
+   await handler("k8uguj1zno[null]", { customId: buttonId });
+   // insufficient decoded param length
+   await expect(() =>
+      handler("k8uguj1zno[]", { customId: buttonId })
+         .catch(allowError.routeNotFound)
+         .catch((e) => Promise.reject(e)),
+   ).rejects.toThrow();
 
    await expect(() =>
       handler(buttonId + "E", { customId: buttonId })
@@ -39,12 +61,12 @@ it("Should create a default fetcher", async () => {
 it("Should create a default fetcher", async () => {
    const { router, handler, _internal } = scope({
       foo(hi: number, id = "ok") {
-         console.log("handling foo", id);
+         console.log("handling no scope foo", hi, id);
       },
    });
 
    const buttonId = router.foo(54);
-
+   await handler(buttonId);
    await handler("E" + buttonId).catch(allowError.routeNotFound);
 
    await expect(() =>
@@ -89,7 +111,7 @@ type Context = { customId: string; pear: boolean };
 it("Should create a default fetcher", async () => {
    const { router, handler } = flare<Context>().scope({
       foo(ctx: Interaction, id = 54) {
-         console.log("handling foo", id);
+         console.log("handling foo second", id);
       },
       bar: {
          // ts-expect-error if you forget to accept context as first param
