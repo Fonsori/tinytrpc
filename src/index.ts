@@ -1,12 +1,12 @@
 import { scope, flare } from "./scope";
-import { allowError, FailedUnlockScopeError, InvalidPayloadScopeError, RouteNotFoundScopeError } from "./errors";
+import { ignoreError, FailedUnlockScopeError, InvalidPayloadScopeError, RouteNotFoundScopeError } from "./errors";
 
 export {
    scope,
    flare,
 
    // Errors
-   allowError,
+   ignoreError,
    FailedUnlockScopeError,
    InvalidPayloadScopeError,
    RouteNotFoundScopeError,

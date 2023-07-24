@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { allowError, flare, scope } from "./index";
+import { ignoreError, flare, scope } from "./index";
 type Interaction = { customId: string };
 
 export const parseIds = (customId: string | undefined) => (customId?.split("-").map((i) => i || undefined) as (string | undefined)[]) ?? [];
@@ -25,7 +25,7 @@ it("Should create a default fetcher", async () => {
    const buttonId = router.foo(243129);
    await handler(buttonId, { customId: buttonId });
    await handler(buttonId, { customId: buttonId });
-   const mes = await handler("E" + buttonId, { customId: buttonId }).catch(allowError.routeNotFound);
+   const mes = await handler("E" + buttonId, { customId: buttonId }).catch(ignoreError.routeNotFound);
    console.log("mes", "caught", !!mes, mes);
 
    const buttonId2 = router.foo();
@@ -40,13 +40,13 @@ it("Should create a default fetcher", async () => {
    // insufficient decoded param length
    await expect(() =>
       handler("k8uguj1zno[]", { customId: buttonId })
-         .catch(allowError.routeNotFound)
+         .catch(ignoreError.routeNotFound)
          .catch((e) => Promise.reject(e)),
    ).rejects.toThrow();
 
    await expect(() =>
       handler(buttonId + "E", { customId: buttonId })
-         .catch(allowError.routeNotFound)
+         .catch(ignoreError.routeNotFound)
          .catch((e) => Promise.reject(e)),
    ).rejects.toThrow();
 
@@ -69,11 +69,11 @@ it("Should create a default fetcher", async () => {
 
    const buttonId = router.foo(54);
    await handler(buttonId);
-   await handler("E" + buttonId).catch(allowError.routeNotFound);
+   await handler("E" + buttonId).catch(ignoreError.routeNotFound);
 
    await expect(() =>
       handler(buttonId + "E")
-         .catch(allowError.routeNotFound)
+         .catch(ignoreError.routeNotFound)
          .catch((e) => Promise.reject(e)),
    ).rejects.toThrow();
 
@@ -82,7 +82,7 @@ it("Should create a default fetcher", async () => {
    const customId = "session";
 
    try {
-      await handler(customId).catch(allowError.routeNotFound);
+      await handler(customId).catch(ignoreError.routeNotFound);
    } catch {
       const [path, lastId] = parseIds(customId);
       console.log("manual button handling", path, lastId);
@@ -128,11 +128,11 @@ it("Should create a default fetcher", async () => {
    const interaction = "cached" as any as Context;
    // if (!interaction.inGuild()) return;
 
-   await handler("E" + buttonId, interaction).catch(allowError.routeNotFound);
+   await handler("E" + buttonId, interaction).catch(ignoreError.routeNotFound);
 
    await expect(() =>
       handler(buttonId + "E", interaction)
-         .catch(allowError.routeNotFound)
+         .catch(ignoreError.routeNotFound)
          .catch((e) => Promise.reject(e)),
    ).rejects.toThrow();
 

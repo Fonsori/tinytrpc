@@ -44,7 +44,7 @@ const silence =
       if (e instanceof condition) return;
       throw e;
    };
-export const allowError = {
+export const ignoreError = {
    routeNotFound: silence(RouteNotFoundScopeError),
    failedUnlock: silence(FailedUnlockScopeError),
    invalidPayload: silence(InvalidPayloadScopeError),
