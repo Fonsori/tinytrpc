@@ -10,14 +10,14 @@ const mass = (o: { id: string; route?: string; data?: string; decoded?: any }) =
 class ScopeError extends Error {
    constructor(message: string) {
       super(message);
-      this.name = "ScopeError";
+      this.name = "ScopeError" + this.name;
    }
 }
 export class RouteNotFoundScopeError extends ScopeError {
    constructor(o: { id: string; path: string }) {
       const message = `Route ${o.path} not found ${mass({ id: o.id })}`;
       super(message);
-      this.name = "RouteNotFound";
+      this.name = "RouteNotFound" + this.name;
    }
 }
 export class FailedUnlockScopeError extends ScopeError {
@@ -26,23 +26,26 @@ export class FailedUnlockScopeError extends ScopeError {
          id: o.id,
       })}`;
       super(message);
-      this.name = "RouteNotFound";
+      this.name = "FailedUnlock" + this.name;
    }
 }
 export class InvalidPayloadScopeError extends ScopeError {
    constructor(o: { id: string; method: { route: string }; msg: any; data: string }) {
       const message = `Invalid payload ${mass({ id: o.id, route: o.method.route, data: o.data, decoded: o.msg })}`;
       super(message);
-      this.name = "InvalidPayload";
+      this.name = "InvalidPayload" + this.name;
    }
 }
 
-const silence = (condition: (e: ScopeError) => boolean) => (e: Error) => {
-   if (e instanceof ScopeError && condition(e)) return;
-   throw e;
-};
+// cool use of "new" keyword thanks https://www.xolv.io/blog/dev-notes/how-to-pass-a-class-to-a-function-in-typescript/
+const silence =
+   <E extends ScopeError>(condition: new (...args: any[]) => E) =>
+   (e: Error) => {
+      if (e instanceof condition) return e;
+      throw e;
+   };
 export const allowError = {
-   routeNotFound: silence((e) => e instanceof RouteNotFoundScopeError),
-   failedUnlock: silence((e) => e instanceof FailedUnlockScopeError),
-   invalidPayload: silence((e) => e instanceof InvalidPayloadScopeError),
+   routeNotFound: silence(RouteNotFoundScopeError),
+   failedUnlock: silence(FailedUnlockScopeError),
+   invalidPayload: silence(InvalidPayloadScopeError),
 };

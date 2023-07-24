@@ -25,7 +25,9 @@ it("Should create a default fetcher", async () => {
    const buttonId = router.foo(243129);
    await handler(buttonId, { customId: buttonId });
    await handler(buttonId, { customId: buttonId });
-   await handler("E" + buttonId, { customId: buttonId }).catch(allowError.routeNotFound);
+   const mes = await handler("E" + buttonId, { customId: buttonId }).catch(allowError.routeNotFound);
+   console.log("mes", "caught", !!mes, mes);
+
    const buttonId2 = router.foo();
    await handler(buttonId2, { customId: buttonId });
 
