@@ -167,9 +167,7 @@ async function execute(id: string, methods: Methods, ctx: any = VoidSymbol) {
    // WRONG there can be less decoded args than params, but not more...
    // apparently default params don't count for function length
    // So we check for too FEW args, since yeah...
-   const methodLength = method.call.length - (hasCtx ? 1 : 0);
-   if (decoded.length < methodLength)
-      throw new InvalidPayloadScopeError({ id, method, data, msg: `too few args: decoded ${decoded.length} expected ${methodLength}` });
+   // Nope this doesn't work either, because we can't check for optional ? params
 
    // Execute
    const result = await (hasCtx ? method.call(ctx, ...decoded) : method.call(...decoded));
