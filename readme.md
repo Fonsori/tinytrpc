@@ -16,53 +16,49 @@ const [buttonName, pageNumber] = interaction.customId.split("-")
 
 ## Full demo
 
+init.
 ```ts
-import { type ButtonInteraction, type Interaction, ActionRowBuilder, ButtonBuilder } from "discord.js"; // Not required, just for demo
-import { flare } from "../src/index";
-// import { flare } from "tinytrpc";
-
-// Arbitrary mock methods to demonstrate type safety with "number" param
-const getPageData = async (guildId: string, page: number) => ({ content: "the mayonnaise approached." });
-const deletePage = async (guildId: string, page: number) => {};
+import { flare } from "tinytrpc";
 
 // Simple "middleware"
 const adminOnly = (interaction: Interaction) => interaction.memberPermissions?.has("Administrator") ?? false;
 
-// Optionally context for handler
+// Optional context for handler
 type Context = ButtonInteraction<"raw" | "cached">;
-const lens = flare<Context>(); // optional but convenient shortcut, since context must be same type if you use it
-
-// A simple scope
+// optional but convenient shortcut for combining routers
+const lens = flare<Context>();
+```
+Basic router with context + middleware checkpoint
+```ts
 const adminPageScope = lens
-   // Optional checkpoint. Never miss a permissions check. Useful in nested routers.
+   // Never miss a permissions check. Useful in nested routers.
    .lock(adminOnly)
    // Your methods
    .scope({
-      // TS requires your context to be the first param
+      // TS requires first param to be context
       async delete(interaction: Context, page: number) {
-         await deletePage(interaction.guildId, page); // pageNum came from the button's customId, but its a number!
+         // "page" comes from component's customId payload
+         await deletePage(interaction.guildId, page);
       },
    });
-
+```
+Nesting routers
+```ts
 const { router, handler } = lens.scope({
-   // More methods, any shape
    page: {
-      // Nest routers (don't destructure children like right above)
-      admin: adminPageScope,
+      admin: adminPageScope, // (uses "_internal" prop for nesting)
 
+      // More methods, any shape
       async open(interaction: Context, page: number) {
-         // Page is a number. TS is happy. You can use any type JSON.stringify can handle
          const pageData = await getPageData(interaction.guildId, page);
 
+         // Example use
          const buttonRow = new ActionRowBuilder<ButtonBuilder>();
          buttonRow.addComponents(
             new ButtonBuilder({
-               label: "previous",
-               // Notice, context doesn't go here. Context is provided by the handler when the interaction is recieved.
-               customId: router.page.open(page - 1),
-            }),
-            new ButtonBuilder({
                label: "next",
+               // generate customId with next page as payload
+               // context is provided later by handler
                customId: router.page.open(page + 1),
             }),
             new ButtonBuilder({
@@ -72,25 +68,29 @@ const { router, handler } = lens.scope({
             }),
          );
 
-         await interaction.update({ content: pageData.content, components: [buttonRow] });
+         await interaction.update({ components: [buttonRow] });
       },
    },
 });
-
-// Generic interaction handler
+```
+Generic interaction handler
+```ts
 async function resolveAnyInteraction(interaction: Interaction) {
    if (!interaction.isButton()) return;
    if (!interaction.inGuild()) return;
-   await handler(interaction.customId, interaction); // this second param is conditionally required if you use context
+   // handler second param is conditionally required if you use context
+   await handler(interaction.customId, interaction);
 }
-
 ```
 
 ## Disclaimer
 Keep component payloads tiny, don't stuff it.
-- Discord caps customId length as 100 characters
-- 10 characters are used for matching the method ID
-- if it doesn't fit, string compression is attempted
+- Discord caps customId length at 100 characters
+	- 10 characters are used for matching the method ID
+- You payload is JSON.stringified
+	- If your payload doesn't fit, string compression is attempted
+- No runtime type validation. Not zod.
+	- fn.length (num of JSON.parsed params) must match method
 
 
 
@@ -99,17 +99,12 @@ Keep component payloads tiny, don't stuff it.
 - Why not store interaction data in a database?
 - Why not just do
 ```ts
-const buttonData = new Map
-
-// creation
-buttonData.set(customId, customData)
-
-// handling
-const data = buttonData.get(customId)
+// creating component
+db.set(customId, payload)
+// handling component interaction
+db.get(customId)
 ```
 ### Because you might
-
-1. Want structure + autocomplete for handling lots of interactions
+1. Want structure + intelisense for handling complex interactions
 1. Want to persist data within discord
 1. Have a value too tiny for a db. Why waste a roundtrip?
-1. Prefer simplicity

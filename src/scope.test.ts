@@ -2,7 +2,67 @@ import { expect, it } from "vitest";
 import { ignoreError, flare, scope } from "./index";
 type Interaction = { customId: string };
 
+type Context = { customId: string; pear: boolean };
+
 export const parseIds = (customId: string | undefined) => (customId?.split("-").map((i) => i || undefined) as (string | undefined)[]) ?? [];
+
+function mfBoi(ctx: Context) {
+   return true;
+}
+function thisOk(ctx: Context) {
+   return true;
+}
+
+it("should lock", async () => {
+   const { router, handler } = flare<Context>()
+      .lock(thisOk)
+      .scope({
+         admin: flare<Context>()
+            .lock(mfBoi)
+            .scope({
+               nononon(ctx: Context, id = 54) {
+                  console.log("handling foo second", id);
+               },
+            }),
+         foo(ctx: Interaction, id = 54) {
+            console.log("handling foo second", id);
+         },
+         bar: {
+            // ts-expect-error if you forget to accept context as first param
+            foo(ctx: Interaction, user: { id: number }, bar = false) {
+               console.log("handling bar", user.id);
+            },
+         },
+      });
+   const buttonId = router.foo(54);
+   console.log({ buttonId });
+
+   const buttonIdNo = router.admin.nononon(54);
+   console.log({ buttonIdNo });
+
+   // const interaction = {} as AnySelectMenuInteraction;
+   const interaction = "cached" as any as Context;
+   // if (!interaction.inGuild()) return;
+   await handler(buttonId, interaction);
+   await handler(buttonIdNo, interaction);
+
+   // await handler("E" + buttonId, interaction).catch(ignoreError.routeNotFound);
+
+   // await expect(() =>
+   //    handler(buttonId + "E", interaction)
+   //       .catch(ignoreError.routeNotFound)
+   //       .catch((e) => Promise.reject(e)),
+   // ).rejects.toThrow();
+
+   // await handler(buttonId, interaction);
+
+   // await handler(buttonId + "E", { customId: buttonId }).catch(ignore.routeNotFound);
+   // await handler(buttonId + "E", { customId: buttonId });
+
+   expect({ hello: "world" }).toEqual({
+      hello: "world",
+   });
+});
 
 it("Should create a default fetcher", async () => {
    const { router, handler } = flare<Interaction>().scope({
@@ -115,7 +175,6 @@ it("Should create a default fetcher", async () => {
 });
 
 // type Context = AnySelectMenuInteraction<"cached" | "raw">;
-type Context = { customId: string; pear: boolean };
 // type Context = "cached" | "raw";
 
 it("Should create a default fetcher", async () => {

@@ -124,7 +124,12 @@ type BaseFlareLock<CTX = any> = {
 export function scope<T extends Router<CTX, T>, CTX = void, F extends LockFn<CTX> | undefined = undefined>(endpoints: T, lockFn?: F) {
    const methods: Methods = new Map();
    // * Explicity setting CTX type is criticial, otherwise it's always unknown
-   const { router } = replaceAnyFnWithGenId<typeof endpoints, CTX>(endpoints, methods);
+   const { router } = replaceAnyFnWithGenId<typeof endpoints, CTX>(
+      endpoints,
+      methods,
+      undefined,
+      lockFn ? new Map([["root", lockFn]]) : undefined,
+   );
    return {
       _internal: { endpoints, ctx: {} as CTX, lockFn },
       router,
