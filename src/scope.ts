@@ -27,6 +27,7 @@ function decode(data: string): any[] {
 }
 
 // Helpers
+type MaybePromise<T> = T | Promise<T>;
 type MapValue<Record> = Record extends Map<any, infer I> ? I : never;
 type Values<T> = T[keyof T];
 type OmitFirstArg<F> = F extends (x: any, ...args: infer P) => infer R ? (...args: P) => R : never;
@@ -114,7 +115,7 @@ export function flare<CTX extends {}>() {
 
 type ExecuteReturn = ReturnType<typeof execute>;
 type Handler<CTX> = ((id: string) => ExecuteReturn) | ((id: string, ctx: CTX) => ExecuteReturn);
-type LockFn<CTX> = CTX extends void ? (...args: any[]) => Promise<boolean> : (ctx: CTX, ...args: any[]) => Promise<boolean>;
+type LockFn<CTX> = CTX extends void ? (...args: any[]) => MaybePromise<boolean> : (ctx: CTX, ...args: any[]) => MaybePromise<boolean>;
 type BaseFlareLock<CTX = any> = {
    _internal: { endpoints: Record<string, any>; ctx: CTX; lockFn?: LockFn<CTX> };
    router: Record<string, any>;
