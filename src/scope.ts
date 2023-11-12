@@ -114,7 +114,7 @@ export function flare<CTX extends {}>() {
 
 type ExecuteReturn = ReturnType<typeof execute>;
 type Handler<CTX> = ((id: string) => ExecuteReturn) | ((id: string, ctx: CTX) => ExecuteReturn);
-type LockFn<CTX> = CTX extends void ? (...args: any[]) => boolean : (ctx: CTX, ...args: any[]) => boolean;
+type LockFn<CTX> = CTX extends void ? (...args: any[]) => Promise<boolean> : (ctx: CTX, ...args: any[]) => Promise<boolean>;
 type BaseFlareLock<CTX = any> = {
    _internal: { endpoints: Record<string, any>; ctx: CTX; lockFn?: LockFn<CTX> };
    router: Record<string, any>;
